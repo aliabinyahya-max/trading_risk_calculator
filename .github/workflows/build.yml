@@ -1,103 +1,41 @@
-name: Build & Analyze
-
-# ملاحظة مهمة: هذا المشروع لا يُدرِج مجلد android/ ضمن المستودع (Pure Dart repo)
-# لذلك كل تشغيل لهذا الـ workflow يُنشئ منصة أندرويد من الصفر عبر `flutter create .`
-# ثم يفعّل coreLibraryDesugaring المطلوب لحزمة flutter_local_notifications.
-#
-# منذ Flutter 3.29، يولّد `flutter create` ملف android/app/build.gradle.kts
-# (Kotlin DSL) بدل الصيغة القديمة android/app/build.gradle (Groovy).
-# الخطوة أدناه تتعرف تلقائياً على أي الصيغتين ظهرت وتطبّق التعديل المناسب
-# بدل افتراض صيغة واحدة فقط (وهو ما كان يفشل بصمت سابقاً).
+name: Build Android APK
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      # نثبّت إصدار Flutter صراحة بدل الاعتماد على channel: stable فقط،
-      # لضمان أن أي تغيير مستقبلي في قالب `flutter create` (مثل هذا التغيير
-      # نفسه من .gradle إلى .gradle.kts) لا يكسر الـ CI بشكل مفاجئ بدون تنبيه.
-      - name: Setup Flutter
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.1'
-          channel: stable
-          cache: true
+          flutter-version: '3.29.0'
+          channel: 'stable'
 
-      - name: Get dependencies
+      - name: Recreate Android Project Files
+        run: flutter create . --platforms=android --org=com.tradingassistant
+
+      - name: Install Dependencies
         run: flutter pub get
 
-      # يُنشئ android/ (و ios/ إلخ) بأحدث قالب متوافق مع إصدار Flutter المثبّت أعلاه.
-      # --overwrite=false + عدم وجود android/ أصلاً في المستودع يعني هذا آمن دائماً.
-      - name: Scaffold platform folders
-        run: flutter create . --platforms=android --org com.example --project-name trading_risk_calculator
-
-      - name: Enable core library desugaring (Groovy or Kotlin DSL)
-        run: |
-          set -euo pipefail
-
-          KTS_FILE="android/app/build.gradle.kts"
-          GROOVY_FILE="android/app/build.gradle"
-
-          if [ -f "$KTS_FILE" ]; then
-            TARGET="$KTS_FILE"
-            IS_KTS=true
-          elif [ -f "$GROOVY_FILE" ]; then
-            TARGET="$GROOVY_FILE"
-            IS_KTS=false
-          else
-            echo "::error::لم يتم العثور على build.gradle أو build.gradle.kts بعد flutter create - راجع مخرجات الخطوة السابقة"
-            exit 1
-          fi
-
-          echo "تم اكتشاف صيغة Gradle: $TARGET"
-
-          # 1) تفعيل isCoreLibraryDesugaringEnabled / coreLibraryDesugaringEnabled داخل compileOptions
-          if ! grep -q "oreLibraryDesugaringEnabled" "$TARGET"; then
-            if [ "$IS_KTS" = true ]; then
-              perl -0pi -e 's/(compileOptions\s*\{)/$1\n        isCoreLibraryDesugaringEnabled = true/' "$TARGET"
-            else
-              perl -0pi -e 's/(compileOptions\s*\{)/$1\n        coreLibraryDesugaringEnabled true/' "$TARGET"
-            fi
-          fi
-
-          # 2) إضافة تبعية desugar_jdk_libs (بصيغة Kotlin أو Groovy حسب الملف)
-          if ! grep -q "desugar_jdk_libs" "$TARGET"; then
-            if [ "$IS_KTS" = true ]; then
-              printf '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n' >> "$TARGET"
-            else
-              printf '\ndependencies {\n    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"\n}\n' >> "$TARGET"
-            fi
-          fi
-
-          echo "----- محتوى $TARGET بعد التعديل -----"
-          cat "$TARGET"
-
-      - name: Add SYSTEM_ALERT_WINDOW permission (النافذة العائمة)
-        run: |
-          set -euo pipefail
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          if [ -f "$MANIFEST" ] && ! grep -q "SYSTEM_ALERT_WINDOW" "$MANIFEST"; then
-            perl -0pi -e 's/(<manifest[^>]*>)/$1\n    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"\/>/' "$MANIFEST"
-          fi
-
-      - name: Analyze
-        run: flutter analyze
-
-      - name: Build APK (release)
+      - name: Build Release APK
         run: flutter build apk --release
 
-      - name: Upload APK artifact
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
+          name: app-release
           path: build/app/outputs/flutter-apk/app-release.apk
