@@ -1,0 +1,45 @@
+name: trading_risk_calculator
+description: "حاسبة إدارة المخاطر وحجم المركز للمتداولين - مع سجل صفقات محلي (Offline-first)"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # تخزين محلي بسيط بدون الحاجة لـ build_runner (Offline-first)
+  sqflite: ^2.3.3+1
+  path: ^1.9.0
+  path_provider: ^2.1.3
+
+  # إدارة الحالة
+  provider: ^6.1.2
+
+  # قراءة/كتابة الحافظة (Clipboard) لتعبئة السعر تلقائياً
+  # (مدمجة أصلاً ضمن Flutter عبر Services.Clipboard - لا تحتاج حزمة خارجية)
+
+  # النافذة العائمة (Android Overlay) - Optional / Phase 2
+  # صلاحية العرض فوق التطبيقات الأخرى تُطلب عبر FlutterOverlayWindow نفسها
+  # (permission_handler كانت مستوردة سابقاً بدون استخدام فعلي - أزيلت)
+  flutter_overlay_window: ^0.4.5
+
+  # تنسيق الأرقام والعملات
+  intl: ^0.19.0
+
+  # اتصال بيانات السوق الحية عبر WebSocket (Phase 2)
+  web_socket_channel: ^2.4.5
+
+  # تنبيهات محلية عند اكتشاف فرصة تداول
+  flutter_local_notifications: ^17.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
