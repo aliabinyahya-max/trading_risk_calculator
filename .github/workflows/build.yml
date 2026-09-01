@@ -28,21 +28,54 @@ jobs:
       - name: Recreate Android Project Files
         run: flutter create . --platforms=android --org=com.tradingassistant
 
-      - name: Configure Android Core Desugaring and NDK
+      - name: Configure Android Gradle (Root Fix)
         run: |
-          APP_GRADLE="android/app/build.gradle"
-          if [ -f "android/app/build.gradle.kts" ]; then
-            APP_GRADLE="android/app/build.gradle.kts"
-            sed -i '/defaultConfig {/a \        minSdk = 21\n        multiDexEnabled = true' $APP_GRADLE
-            sed -i '/compileOptions {/a \        isCoreLibraryDesugaringEnabled = true' $APP_GRADLE
-            sed -i '/android {/a \    ndkVersion = "27.0.12077973"' $APP_GRADLE
-            sed -i '/dependencies {/a \    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")' $APP_GRADLE
-          else
-            sed -i '/defaultConfig {/a \        minSdkVersion 21\n        multiDexEnabled true' $APP_GRADLE
-            sed -i '/compileOptions {/a \        coreLibraryDesugaringEnabled true' $APP_GRADLE
-            sed -i '/android {/a \    ndkVersion "27.0.12077973"' $APP_GRADLE
-            sed -i '/dependencies {/a \    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"' $APP_GRADLE
-          fi
+          cat << 'GRADLE' > android/app/build.gradle.kts
+          plugins {
+              id("com.android.application")
+              id("kotlin-android")
+              id("dev.flutter.flutter-gradle-plugin")
+          }
+
+          android {
+              namespace = "com.tradingassistant.trading_risk_calculator"
+              compileSdk = flutter.compileSdkVersion
+              ndkVersion = "27.0.12077973"
+
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+                  isCoreLibraryDesugaringEnabled = true
+              }
+
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+
+              defaultConfig {
+                  applicationId = "com.tradingassistant.trading_risk_calculator"
+                  minSdk = 21
+                  targetSdk = flutter.targetSdkVersion
+                  versionCode = flutter.versionCode
+                  versionName = flutter.versionName
+                  multiDexEnabled = true
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig = signingConfigs.getByName("debug")
+                  }
+              }
+          }
+
+          flutter {
+              source = "../.."
+          }
+
+          dependencies {
+              coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+          }
+          GRADLE
 
       - name: Install Dependencies
         run: flutter pub get
