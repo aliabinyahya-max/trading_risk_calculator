@@ -28,6 +28,22 @@ jobs:
       - name: Recreate Android Project Files
         run: flutter create . --platforms=android --org=com.tradingassistant
 
+      - name: Configure Android Core Desugaring and NDK
+        run: |
+          APP_GRADLE="android/app/build.gradle"
+          if [ -f "android/app/build.gradle.kts" ]; then
+            APP_GRADLE="android/app/build.gradle.kts"
+            sed -i '/defaultConfig {/a \        minSdk = 21\n        multiDexEnabled = true' $APP_GRADLE
+            sed -i '/compileOptions {/a \        isCoreLibraryDesugaringEnabled = true' $APP_GRADLE
+            sed -i '/android {/a \    ndkVersion = "27.0.12077973"' $APP_GRADLE
+            sed -i '/dependencies {/a \    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")' $APP_GRADLE
+          else
+            sed -i '/defaultConfig {/a \        minSdkVersion 21\n        multiDexEnabled true' $APP_GRADLE
+            sed -i '/compileOptions {/a \        coreLibraryDesugaringEnabled true' $APP_GRADLE
+            sed -i '/android {/a \    ndkVersion "27.0.12077973"' $APP_GRADLE
+            sed -i '/dependencies {/a \    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"' $APP_GRADLE
+          fi
+
       - name: Install Dependencies
         run: flutter pub get
 
