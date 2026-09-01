@@ -140,7 +140,7 @@ class _BacktestScreenState extends State<BacktestScreen> {
               const Text('لا توجد رموز محفوظة بعد. افتح شاشة "السوق المباشر" أولاً.', style: TextStyle(color: Colors.orange))
             else
               DropdownButtonFormField<String>(
-                initialValue: _selectedSymbol,
+                value: _selectedSymbol,
                 decoration: const InputDecoration(labelText: 'الرمز', border: OutlineInputBorder()),
                 items: _symbols.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                 onChanged: (v) => setState(() => _selectedSymbol = v),
